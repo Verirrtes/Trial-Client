@@ -9,8 +9,8 @@ This fork is not affiliated with or endorsed by the BestClient, DDNet or TClient
 
 ## Changes in this fork
 
-- Rebranded user-visible strings to "Trial Client" (version 1.0.0; indicator
-  announcements use the `1.0.0-trial` label).
+- Rebranded user-visible strings to "Trial Client" (version 1.0.1; indicator
+  announcements use the `1.0.1-trial` label).
 - Disabled the built-in auto-updater so the client cannot replace itself with an
   official BestClient build.
 - Added the creator card in **Settings -> Trial -> Info** and the default skin
@@ -100,7 +100,7 @@ folders and the BestClient master server.
 ## Building
 
 Run `configure.bat`, then `build_client.bat`, then optionally `package_client.bat`.
-The packaged client is written to `dist/Trial-1.0.0-win64.zip`.
+The packaged client is written to `dist/Trial-1.0.1-win64.zip`.
 
 ## Licensing
 

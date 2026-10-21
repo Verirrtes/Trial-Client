@@ -20,6 +20,7 @@
 #include <game/client/components/bestclient/fast_actions.h>
 #include <game/client/components/bestclient/gradient.h>
 #include <game/client/components/bestclient/bestclient.h>
+#include <game/client/components/bestclient/version.h>
 #include <game/client/components/bestclient/cursor_trail.h>
 #include <game/client/components/bestclient/physicball.h>
 #include <game/client/components/bestclient/media_decoder.h>
@@ -4610,7 +4611,7 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	VersionBadge.y = HeaderArea.y + (HeaderArea.h - VersionBadge.h) * 0.5f;
 	Graphics()->DrawRect(VersionBadge.x, VersionBadge.y, VersionBadge.w, VersionBadge.h, ColorRGBA(0.35f, 0.8f, 1.0f, 0.14f), IGraphics::CORNER_ALL, 10.0f);
 	TextRender()->TextColor(ColorRGBA(0.6f, 0.88f, 1.0f, 0.95f));
-	Ui()->DoLabel(&VersionBadge, "v1.0.0-trial", 10.0f, TEXTALIGN_MC);
+	Ui()->DoLabel(&VersionBadge, "v" TRIAL_CLIENT_VERSION, 10.0f, TEXTALIGN_MC);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 	Content.HSplitTop(MarginBetweenViews, nullptr, &Content);

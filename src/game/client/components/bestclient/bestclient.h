@@ -83,6 +83,7 @@ public:
 	void OnClientNameChanged(int ClientId, const char *pNewName, const char *pNewClan);
 
 	int HudFramesPerSecond(float FrameTimeAverage);
+	float TrialFpsMultiplier() const;
 
 	void CopyPlayerSkin(int ClientId);
 	void FetchFindHours(const char *pName);

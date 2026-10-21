@@ -342,6 +342,10 @@
 	{"Trajectory opacity", SETTINGS_NAV_LEAF_TRIAL, "Trajectory preview", &g_Config.m_TcTrialTrajectoryAlpha, nullptr},
 	{"Trajectory width", SETTINGS_NAV_LEAF_TRIAL, "Trajectory preview", &g_Config.m_TcTrialTrajectoryWidth, nullptr},
 
+	{"FPS Spoofer", SETTINGS_NAV_LEAF_TRIAL, "Trial", &g_Config.m_TcTrialFpsSpoofer, nullptr},
+	{"FPS spoofer", SETTINGS_NAV_LEAF_TRIAL, "FPS Spoofer", &g_Config.m_TcTrialFpsSpoofer, nullptr},
+	{"FPS multiplier", SETTINGS_NAV_LEAF_TRIAL, "FPS Spoofer", &g_Config.m_TcTrialFpsSpooferMultiplier, &g_Config.m_TcTrialFpsSpoofer},
+
 	{"Discord Rich Presence", SETTINGS_NAV_LEAF_TRIAL, "Trial", &g_Config.m_BcDiscordRPC, nullptr},
 	{"Discord RPC", SETTINGS_NAV_LEAF_TRIAL, "Discord Rich Presence", &g_Config.m_BcDiscordRPC, nullptr},
 	{"Discord application ID", SETTINGS_NAV_LEAF_TRIAL, "Discord Rich Presence", &g_Config.m_TcTrialDiscordAppId, &g_Config.m_BcDiscordRPC},

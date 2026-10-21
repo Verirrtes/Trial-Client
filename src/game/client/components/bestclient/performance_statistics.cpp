@@ -111,6 +111,8 @@ void CPerformanceStatistics::OnRender()
 		if(g_Config.m_GfxRefreshRate > 0)
 			m_CurrentFPS = std::clamp(m_CurrentFPS, 0, g_Config.m_GfxRefreshRate);
 
+		m_CurrentFPS = round_to_int(m_CurrentFPS * GameClient()->m_BestClient.TrialFpsMultiplier());
+
 		m_LastFpsUpdateTime = time_get();
 	}
 

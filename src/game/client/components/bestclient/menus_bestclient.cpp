@@ -4634,6 +4634,17 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 		View.HSplitTop(LineSize, &Line, &View);
 		Ui()->DoScrollbarOption(pValue, pValue, &Line, pText, Min, Max, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_DELAYUPDATE, pSuffix);
 	};
+	const auto DrawTrialTitle = [&](CUIRect Title, const char *pText, CButtonContainer *pAuthor, const char *pAuthorName) {
+		CUIRect AuthorBadge;
+		Title.VSplitRight(6.0f, &Title, nullptr);
+		BcMenuBadges::DrawAuthor(Graphics(), Ui(), TextRender(), &Title, 4.0f, &AuthorBadge);
+		Ui()->DoButtonLogic(pAuthor, 0, &AuthorBadge, BUTTONFLAG_NONE);
+		GameClient()->m_Tooltips.DoToolTip(pAuthor, &AuthorBadge, pAuthorName);
+		GameClient()->m_Tooltips.SetFadeTime(pAuthor, 0.0f);
+		Ui()->DoLabel(&Title, pText, HeadlineFontSize, TEXTALIGN_ML);
+	};
+
+	static CButtonContainer s_TrialQoLAuthor, s_TrialFpsSpooferAuthor, s_TrialParticleAuthor, s_TrialTrajectoryAuthor, s_TrialDiscordAuthor;
 
 	// --- Trial QoL
 	const float QoLBlockHeight = LineSize + MarginSmall + 6.0f * LineSize + MarginSmall + 6.0f;
@@ -4653,7 +4664,7 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	Graphics()->DrawRect(QoLTitle.x, QoLTitle.y + 5.0f, 3.0f, 10.0f, ColorRGBA(0.35f, 0.8f, 1.0f, 0.9f), IGraphics::CORNER_ALL, 1.5f);
 	QoLTitle.x += 9.0f;
 	QoLTitle.w -= 9.0f;
-	Ui()->DoLabel(&QoLTitle, BcLocalize("Trial QoL"), HeadlineFontSize, TEXTALIGN_ML);
+	DrawTrialTitle(QoLTitle, BcLocalize("Trial QoL"), &s_TrialQoLAuthor, "Verirrtes");
 	QoLBlock.HSplitTop(MarginSmall, nullptr, &QoLBlock);
 
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTrialChatTimestamps, BcLocalize("Chat timestamps"), &g_Config.m_TcTrialChatTimestamps, &QoLBlock, LineSize);
@@ -4665,6 +4676,64 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	DoLine_KeyReader(QoLBlock, s_TrialScreenshotReader, s_TrialScreenshotClear, BcLocalize("Screenshot key"), "screenshot");
 	static CButtonContainer s_TrialDemoReader, s_TrialDemoClear;
 	DoLine_KeyReader(QoLBlock, s_TrialDemoReader, s_TrialDemoClear, BcLocalize("Demo toggle key"), "tc_toggle_demo");
+
+	LeftColumn.HSplitTop(MarginBetweenViews, nullptr, &LeftColumn);
+
+	const bool FpsSpooferOn = g_Config.m_TcTrialFpsSpoofer != 0;
+	const float FpsSpooferBlockHeight = LineSize + MarginSmall + LineSize + (FpsSpooferOn ? MarginSmall + LineSize + 14.0f : 0.0f);
+	CUIRect FpsSpooferBlock;
+	LeftColumn.HSplitTop(FpsSpooferBlockHeight, &FpsSpooferBlock, &LeftColumn);
+	CUIRect FpsSpooferBg = FpsSpooferBlock;
+	FpsSpooferBg.w += BlockPadding;
+	FpsSpooferBg.h += BlockPadding;
+	FpsSpooferBg.x -= BlockPadding * 0.5f;
+	FpsSpooferBg.y -= BlockPadding * 0.5f;
+	BestClientUiTheme::DrawUiBlock(&FpsSpooferBg, IGraphics::CORNER_ALL, 10.0f);
+	BestClientSettingsSearch::DrawBlockHighlight(&g_Config.m_TcTrialFpsSpoofer, &FpsSpooferBg);
+	BestClientSettingsSearch::DrawBlockHighlight(&g_Config.m_TcTrialFpsSpooferMultiplier, &FpsSpooferBg);
+
+	CUIRect FpsSpooferTitle;
+	FpsSpooferBlock.HSplitTop(LineSize, &FpsSpooferTitle, &FpsSpooferBlock);
+	Graphics()->DrawRect(FpsSpooferTitle.x, FpsSpooferTitle.y + 5.0f, 3.0f, 10.0f, ColorRGBA(0.45f, 1.0f, 0.55f, 0.9f), IGraphics::CORNER_ALL, 1.5f);
+	FpsSpooferTitle.x += 9.0f;
+	FpsSpooferTitle.w -= 9.0f;
+	DrawTrialTitle(FpsSpooferTitle, BcLocalize("FPS Spoofer"), &s_TrialFpsSpooferAuthor, "запомни6");
+	FpsSpooferBlock.HSplitTop(MarginSmall, nullptr, &FpsSpooferBlock);
+
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTrialFpsSpoofer, BcLocalize("Enable FPS spoofer"), &g_Config.m_TcTrialFpsSpoofer, &FpsSpooferBlock, LineSize);
+
+	if(FpsSpooferOn)
+	{
+		constexpr int MinMultiplier = 20;
+		constexpr int MaxMultiplier = 100;
+		int &MultiplierValue = g_Config.m_TcTrialFpsSpooferMultiplier;
+
+		CUIRect FpsLine;
+		FpsSpooferBlock.HSplitTop(MarginSmall, nullptr, &FpsSpooferBlock);
+		FpsSpooferBlock.HSplitTop(LineSize, &FpsLine, &FpsSpooferBlock);
+
+		char aValueBuf[16];
+		str_format(aValueBuf, sizeof(aValueBuf), "%.1fx", MultiplierValue / 10.0f);
+		char aLabelBuf[64];
+		if(BestClientUiTheme::IsNewScrollbar())
+			str_copy(aLabelBuf, BcLocalize("Multiplier"));
+		else
+			str_format(aLabelBuf, sizeof(aLabelBuf), "%s: %s", BcLocalize("Multiplier"), aValueBuf);
+
+		CUIRect FpsLabel, FpsScrollBar;
+		FpsLine.VSplitMid(&FpsLabel, &FpsScrollBar, std::min(10.0f, FpsLine.w * 0.05f));
+		Ui()->DoLabel(&FpsLabel, aLabelBuf, FpsLabel.h * CUi::ms_FontmodHeight * 0.8f, TEXTALIGN_ML);
+		BestClientSettingsSearch::DrawItemHighlight(&g_Config.m_TcTrialFpsSpooferMultiplier, &FpsLine);
+		const float Rel = CUi::ms_LinearScrollbarScale.ToRelative(MultiplierValue, MinMultiplier, MaxMultiplier);
+		const float NewRel = Ui()->DoScrollbarH(&g_Config.m_TcTrialFpsSpooferMultiplier, &FpsScrollBar, Rel, nullptr, BestClientUiTheme::IsNewScrollbar() ? aValueBuf : nullptr);
+		MultiplierValue = std::clamp(CUi::ms_LinearScrollbarScale.ToAbsolute(NewRel, MinMultiplier, MaxMultiplier), MinMultiplier, MaxMultiplier);
+
+		CUIRect FpsSpooferHint;
+		FpsSpooferBlock.HSplitTop(14.0f, &FpsSpooferHint, &FpsSpooferBlock);
+		TextRender()->TextColor(ColorRGBA(0.6f, 0.7f, 0.82f, 0.9f));
+		Ui()->DoLabel(&FpsSpooferHint, BcLocalize("Visual only - the real frame rate is not changed."), 10.0f, TEXTALIGN_ML);
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+	}
 
 	LeftColumn.HSplitTop(MarginBetweenViews, nullptr, &LeftColumn);
 
@@ -4692,7 +4761,7 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	Graphics()->DrawRect(ParticleTitle.x, ParticleTitle.y + 5.0f, 3.0f, 10.0f, ColorRGBA(0.75f, 0.65f, 1.0f, 0.9f), IGraphics::CORNER_ALL, 1.5f);
 	ParticleTitle.x += 9.0f;
 	ParticleTitle.w -= 9.0f;
-	Ui()->DoLabel(&ParticleTitle, BcLocalize("Particle Trails"), HeadlineFontSize, TEXTALIGN_ML);
+	DrawTrialTitle(ParticleTitle, BcLocalize("Particle Trails"), &s_TrialParticleAuthor, "Verirrtes");
 	ParticleBlock.HSplitTop(MarginSmall, nullptr, &ParticleBlock);
 
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTrialParticleTrail, BcLocalize("Enable particle trails"), &g_Config.m_TcTrialParticleTrail, &ParticleBlock, LineSize);
@@ -4750,7 +4819,7 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	Graphics()->DrawRect(TrajectoryTitle.x, TrajectoryTitle.y + 5.0f, 3.0f, 10.0f, ColorRGBA(1.0f, 0.55f, 0.15f, 0.9f), IGraphics::CORNER_ALL, 1.5f);
 	TrajectoryTitle.x += 9.0f;
 	TrajectoryTitle.w -= 9.0f;
-	Ui()->DoLabel(&TrajectoryTitle, BcLocalize("Trajectory preview"), HeadlineFontSize, TEXTALIGN_ML);
+	DrawTrialTitle(TrajectoryTitle, BcLocalize("Trajectory preview"), &s_TrialTrajectoryAuthor, "Verirrtes");
 	TrajectoryBlock.HSplitTop(MarginSmall, nullptr, &TrajectoryBlock);
 
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTrialTrajectoryGrenade, BcLocalize("Grenade"), &g_Config.m_TcTrialTrajectoryGrenade, &TrajectoryBlock, LineSize);
@@ -4784,7 +4853,7 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	Graphics()->DrawRect(DiscordTitle.x, DiscordTitle.y + 5.0f, 3.0f, 10.0f, ColorRGBA(0.35f, 0.65f, 1.0f, 0.9f), IGraphics::CORNER_ALL, 1.5f);
 	DiscordTitle.x += 9.0f;
 	DiscordTitle.w -= 9.0f;
-	Ui()->DoLabel(&DiscordTitle, BcLocalize("Discord Rich Presence"), HeadlineFontSize, TEXTALIGN_ML);
+	DrawTrialTitle(DiscordTitle, BcLocalize("Discord Rich Presence"), &s_TrialDiscordAuthor, "Verirrtes");
 	DiscordBlock.HSplitTop(MarginSmall, nullptr, &DiscordBlock);
 
 	// Trial: the Discord RPC settings are locked and always enabled.
@@ -4828,7 +4897,7 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	const float CreatorTeeSize = 64.0f;
 	const float CreatorNameFontSize = 24.0f;
 	const float CreatorCardSize = CreatorTeeSize + MarginSmall * 2.0f;
-	const float CreatorBlockHeight = LineSize + MarginSmall + CreatorCardSize + MarginSmall;
+	const float CreatorBlockHeight = LineSize + MarginSmall + CreatorCardSize * 2.0f + MarginSmall * 2.0f;
 	CUIRect CreatorBlock;
 	RightColumn.HSplitTop(CreatorBlockHeight, &CreatorBlock, &RightColumn);
 	CUIRect CreatorBg = CreatorBlock;
@@ -4846,19 +4915,26 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	Ui()->DoLabel(&CreatorTitle, BcLocalize("Creator"), HeadlineFontSize, TEXTALIGN_ML);
 	CreatorBlock.HSplitTop(MarginSmall, nullptr, &CreatorBlock);
 
-	CUIRect CreatorCard, CreatorTee, CreatorLabel, CreatorButton;
-	CreatorBlock.HSplitTop(CreatorCardSize, &CreatorCard, &CreatorBlock);
-	CreatorCard.VSplitLeft(CreatorCardSize, &CreatorTee, &CreatorLabel);
-	CreatorLabel.VSplitLeft(TextRender()->TextWidth(CreatorNameFontSize, "Verirrtes"), &CreatorLabel, &CreatorButton);
-	CreatorButton.VSplitLeft(MarginSmall, nullptr, &CreatorButton);
-	CreatorButton.w = CreatorNameFontSize;
-	CreatorButton.h = CreatorNameFontSize;
-	CreatorButton.y = CreatorLabel.y + (CreatorLabel.h / 2.0f - CreatorButton.h / 2.0f);
-	Ui()->DoLabel(&CreatorLabel, "Verirrtes", CreatorNameFontSize, TEXTALIGN_ML);
+	const auto RenderCreator = [&](const char *pName, const char *pSkinName, CButtonContainer *pButton) {
+		CUIRect CreatorCard, CreatorTee, CreatorLabel, CreatorButton;
+		CreatorBlock.HSplitTop(CreatorCardSize, &CreatorCard, &CreatorBlock);
+		CreatorCard.VSplitLeft(CreatorCardSize, &CreatorTee, &CreatorLabel);
+		CreatorLabel.VSplitLeft(TextRender()->TextWidth(CreatorNameFontSize, pName), &CreatorLabel, &CreatorButton);
+		CreatorButton.VSplitLeft(MarginSmall, nullptr, &CreatorButton);
+		CreatorButton.w = CreatorNameFontSize;
+		CreatorButton.h = CreatorNameFontSize;
+		CreatorButton.y = CreatorLabel.y + (CreatorLabel.h / 2.0f - CreatorButton.h / 2.0f);
+		Ui()->DoLabel(&CreatorLabel, pName, CreatorNameFontSize, TEXTALIGN_ML);
+		if(Ui()->DoButton_FontIcon(pButton, FontIcon::ARROW_UP_RIGHT_FROM_SQUARE, 0, &CreatorButton, IGraphics::CORNER_ALL))
+			Client()->ViewLink("https://ddnet.org/players/Verirrtes/");
+		RenderDevSkin(CreatorTee.Center(), CreatorTeeSize, pSkinName, "nanami", false, 0, 0, 0, false, true);
+	};
+
 	static CButtonContainer s_TrialCreatorLink;
-	if(Ui()->DoButton_FontIcon(&s_TrialCreatorLink, FontIcon::ARROW_UP_RIGHT_FROM_SQUARE, 0, &CreatorButton, IGraphics::CORNER_ALL))
-		Client()->ViewLink("https://ddnet.org/players/Verirrtes/");
-	RenderDevSkin(CreatorTee.Center(), CreatorTeeSize, "icey-nanami", "nanami", false, 0, 0, 0, false, true);
+	static CButtonContainer s_TrialCreatorLinkSecond;
+	RenderCreator("Verirrtes", "icey-nanami", &s_TrialCreatorLink);
+	CreatorBlock.HSplitTop(MarginSmall, nullptr, &CreatorBlock);
+	RenderCreator("запомни6", "zombie1", &s_TrialCreatorLinkSecond);
 
 	RightColumn.HSplitTop(MarginBetweenViews, nullptr, &RightColumn);
 

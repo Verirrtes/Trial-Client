@@ -82,6 +82,10 @@ This fork is not affiliated with or endorsed by the BestClient, DDNet or TClient
 - Added a **Weapon size** slider (`tc_weapon_size`, 0-300%) in
   **Settings -> Trial -> Trial QoL** and in the TClient visual settings. It
   scales weapon and muzzle sprites cosmetically without changing gameplay.
+- Added an **FPS Spoofer** module in **Settings -> Trial** that visually
+  multiplies the FPS counters from 2.0x to 10.0x in 0.1 steps. It only changes
+  the displayed numbers and does not affect real frame rate or gameplay
+  (`tc_trial_fps_spoofer`, `tc_trial_fps_spoofer_multiplier`).
 - Hotkeys changed through the Trial settings UI are written to the config
   immediately, so they survive closing the client without a clean shutdown.
 

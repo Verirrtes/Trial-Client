@@ -1,5 +1,6 @@
 #include "statusbar.h"
 
+#include <base/math.h>
 #include <base/time.h>
 
 #include <engine/graphics.h>
@@ -161,7 +162,7 @@ float CStatusBar::FPSWidth()
 void CStatusBar::FPSRender()
 {
 	m_FrameTimeAverage = m_FrameTimeAverage * 0.9f + Client()->RenderFrameTime() * 0.1f;
-	int FPS = (int)(1.0f / m_FrameTimeAverage + 0.5f);
+	int FPS = round_to_int(1.0f / m_FrameTimeAverage * GameClient()->m_BestClient.TrialFpsMultiplier());
 	char aBuf[32];
 	str_format(aBuf, sizeof(aBuf), "%d", FPS);
 	TextRender()->Text(m_CursorX, m_CursorY, m_FontSize, aBuf);

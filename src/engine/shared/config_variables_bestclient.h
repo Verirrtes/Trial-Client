@@ -650,3 +650,5 @@ MACRO_CONFIG_INT(TcTrialTrajectoryLaser, tc_trial_trajectory_laser, 0, 0, 1, CFG
 MACRO_CONFIG_INT(TcTrialTrajectoryShotgun, tc_trial_trajectory_shotgun, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show a preview of the shotgun trajectory")
 MACRO_CONFIG_INT(TcTrialTrajectoryAlpha, tc_trial_trajectory_alpha, 70, 1, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Trajectory preview opacity in percent")
 MACRO_CONFIG_INT(TcTrialTrajectoryWidth, tc_trial_trajectory_width, 2, 1, 10, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Trajectory preview line width")
+MACRO_CONFIG_INT(TcTrialFpsSpoofer, tc_trial_fps_spoofer, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visually multiply the displayed FPS (does not affect real performance)")
+MACRO_CONFIG_INT(TcTrialFpsSpooferMultiplier, tc_trial_fps_spoofer_multiplier, 20, 20, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "FPS spoof multiplier in tenths (20 = 2.0x, 100 = 10.0x)")

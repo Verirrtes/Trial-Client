@@ -1,6 +1,7 @@
 /* Copyright © 2026 BestProject Team */
 #include "weapon_vfx.h"
 
+#include <base/color.h>
 #include <base/math.h>
 
 #include <engine/client.h>
@@ -252,19 +253,22 @@ void CWeaponVfx::RenderTrajectories()
 	const CTuningParams *pTuning = GameClient()->GetTuning(TuneZone);
 	const float Alpha = g_Config.m_TcTrialTrajectoryAlpha / 100.0f;
 	const float Width = (float)g_Config.m_TcTrialTrajectoryWidth;
+	const ColorRGBA GrenadeColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcTrialTrajectoryGrenadeColor, false));
+	const ColorRGBA LaserColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcTrialTrajectoryLaserColor, false));
+	const ColorRGBA ShotgunColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcTrialTrajectoryShotgunColor, false));
 
 	if(Weapon == WEAPON_GRENADE)
 	{
 		std::vector<vec2> vPoints;
 		const vec2 Start = PlayerPos + Direction * 10.5f;
 		SimulateBallisticPath(Collision(), pTuning, WEAPON_GRENADE, Start, Direction, vPoints);
-		DrawTrajectoryPath(Graphics(), vPoints, ColorRGBA(1.0f, 0.55f, 0.15f, 1.0f), Width, Alpha);
+		DrawTrajectoryPath(Graphics(), vPoints, GrenadeColor, Width, Alpha);
 	}
 	else if(Weapon == WEAPON_LASER)
 	{
 		std::vector<vec2> vPoints;
 		SimulateLaserPath(Collision(), pTuning, PlayerPos, Direction, vPoints);
-		DrawTrajectoryPath(Graphics(), vPoints, ColorRGBA(0.35f, 0.75f, 1.0f, 1.0f), Width, Alpha);
+		DrawTrajectoryPath(Graphics(), vPoints, LaserColor, Width, Alpha);
 	}
 	else if(GameClient()->m_GameInfo.m_PredictVanilla)
 	{
@@ -277,14 +281,14 @@ void CWeaponVfx::RenderTrajectories()
 			const float SpeedScale = mix((float)pTuning->m_ShotgunSpeeddiff, 1.0f, 1.0f - absolute(i) / 2.0f);
 			std::vector<vec2> vPoints;
 			SimulateBallisticPath(Collision(), pTuning, WEAPON_SHOTGUN, Start, direction(SpreadAngle) * SpeedScale, vPoints);
-			DrawTrajectoryPath(Graphics(), vPoints, ColorRGBA(0.50f, 1.0f, 0.45f, 1.0f), Width, Alpha * 0.75f);
+			DrawTrajectoryPath(Graphics(), vPoints, ShotgunColor, Width, Alpha * 0.75f);
 		}
 	}
 	else
 	{
 		std::vector<vec2> vPoints;
 		SimulateLaserPath(Collision(), pTuning, PlayerPos, Direction, vPoints);
-		DrawTrajectoryPath(Graphics(), vPoints, ColorRGBA(0.50f, 1.0f, 0.45f, 1.0f), Width, Alpha);
+		DrawTrajectoryPath(Graphics(), vPoints, ShotgunColor, Width, Alpha);
 	}
 }
 

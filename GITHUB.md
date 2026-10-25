@@ -44,7 +44,7 @@ package_client.bat
 ```
 
 Готовый exe: `build\Trial.exe`
-Архив: `dist\Trial-1.0.0-win64.zip`
+Архив: `dist\Trial-1.0.2-win64.zip`
 
 ## Важно
 

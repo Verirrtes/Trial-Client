@@ -9,7 +9,8 @@
 // Trial Client fork marker. Keep BestClient's network identity and official
 // code validation unchanged; use this only for local UI decisions.
 #define TRIAL_CLIENT 1
-#define TRIAL_CLIENT_VERSION BESTCLIENT_VERSION "-trial"
+#define TRIAL_CLIENT_VERSION_NUMBER "1.0.2"
+#define TRIAL_CLIENT_VERSION TRIAL_CLIENT_VERSION_NUMBER "-trial"
 
 #ifndef BESTCLIENT_OFFICIAL_CODE
 #define BESTCLIENT_OFFICIAL_CODE ""

@@ -834,6 +834,7 @@ public:
 		SETTINGS_PROFILES, // TClient
 		SETTINGS_CONFIGS, // TClient
 		SETTINGS_CREDITS,
+		SETTINGS_TRIAL_INFO, // Trial
 		SETTINGS_LENGTH,
 	};
 
@@ -1015,6 +1016,7 @@ private:
 	void RenderSettingsBestClientOthers(CUIRect MainView);
 	void RenderSettingsEntity(CUIRect MainView);
 	void RenderSettingsTrial(CUIRect MainView);
+	void RenderSettingsTrialInfo(CUIRect MainView);
 	// bestclient
 	void RenderSettingsBestClientFun(CUIRect MainView);
 	// bestclient

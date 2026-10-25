@@ -9,11 +9,11 @@ This fork is not affiliated with or endorsed by the BestClient, DDNet or TClient
 
 ## Changes in this fork
 
-- Rebranded user-visible strings to "Trial Client" (version 1.0.1; indicator
-  announcements use the `1.0.1-trial` label).
+- Rebranded user-visible strings to "Trial Client" (version 1.0.2; indicator
+  announcements use the `1.0.2-trial` label).
 - Disabled the built-in auto-updater so the client cannot replace itself with an
   official BestClient build.
-- Added the creator card in **Settings -> Trial -> Info** and the default skin
+- Added creator cards for **Verirrtes** and **запомни6** on the **Settings -> Trial -> Info** page, plus the default skin
   `icey-nanami`.
 - Ported selected quality-of-life modules from Entity Client:
   - **Map overview**: a subtle trail of the path you have taken, with an opacity
@@ -24,6 +24,16 @@ This fork is not affiliated with or endorsed by the BestClient, DDNet or TClient
     Actions are stored in `trial_player_actions.cfg`.
 - Added local timestamps to chat messages, optionally configurable and shown in
   the chat log and copied chat text.
+- Added chat keyword search: click the magnifying glass next to the chat input
+  (or press **Ctrl+F** while the chat input is open) to filter messages by
+  player name or message text. The match count updates live; **Enter** or
+  **Escape** closes the search. Streamer mode keeps matching against the
+  already-censored chat text, so hidden names and messages are not exposed.
+- Added a local timed chat mute: `!mute <player> <minutes>` accepts any positive
+  number of minutes, and `!unmute <player|all>` removes the mute. Expired mutes
+  are pruned automatically. The old TClient chat-bind defaults `!mute`/`!unmute`
+  (which used `add_foe`/`remove_foe`) were renamed to `!foe`/`!unfoe` so they no
+  longer swallow the timed mute command.
 - Added friend-online notifications: a four-second notification in the top-right
   corner, plus a chat line and desktop notification. Friends are detected on the
   current server, on other servers known to the server browser, and through the
@@ -82,10 +92,6 @@ This fork is not affiliated with or endorsed by the BestClient, DDNet or TClient
 - Added a **Weapon size** slider (`tc_weapon_size`, 0-300%) in
   **Settings -> Trial -> Trial QoL** and in the TClient visual settings. It
   scales weapon and muzzle sprites cosmetically without changing gameplay.
-- Added an **FPS Spoofer** module in **Settings -> Trial** that visually
-  multiplies the FPS counters from 2.0x to 10.0x in 0.1 steps. It only changes
-  the displayed numbers and does not affect real frame rate or gameplay
-  (`tc_trial_fps_spoofer`, `tc_trial_fps_spoofer_multiplier`).
 - Hotkeys changed through the Trial settings UI are written to the config
   immediately, so they survive closing the client without a clean shutdown.
 
@@ -100,7 +106,7 @@ folders and the BestClient master server.
 ## Building
 
 Run `configure.bat`, then `build_client.bat`, then optionally `package_client.bat`.
-The packaged client is written to `dist/Trial-1.0.1-win64.zip`.
+The packaged client is written to `dist/Trial-1.0.2-win64.zip`.
 
 ## Licensing
 

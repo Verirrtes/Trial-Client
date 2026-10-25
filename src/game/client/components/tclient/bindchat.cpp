@@ -48,8 +48,8 @@ decltype(CBindChat::BIND_DEFAULTS) CBindChat::BIND_DEFAULTS = {
 	{TCLocalizable("Other"), {
 					 {TCLocalizable("Translate:"), {"!translate", "translate"}},
 					 {TCLocalizable("Translate ID:"), {"!translateid", "translate_id"}},
-					 {TCLocalizable("Mute:"), {"!mute", "add_foe"}},
-					 {TCLocalizable("Unmute:"), {"!unmute", "remove_foe"}},
+					 {TCLocalizable("Add foe:"), {"!foe", "add_foe"}},
+					 {TCLocalizable("Remove foe:"), {"!unfoe", "remove_foe"}},
 				 }},
 };
 
@@ -192,6 +192,14 @@ bool CBindChat::CheckBindChat(const char *pText)
 bool CBindChat::ChatDoBinds(const char *pText)
 {
 	if(pText[0] == ' ' || pText[0] == '\0' || pText[1] == '\0')
+		return false;
+
+	// Trial: !mute and !unmute are client chat commands handled by
+	// CChat::HandleTimedMuteCommand. A stale/default bindchat entry with the same
+	// name must not swallow them (the old default used "!mute" for add_foe).
+	const int TextLength = str_length(pText);
+	if((TextLength >= 5 && str_startswith_nocase(pText, "!mute") && (TextLength == 5 || pText[5] == ' ')) ||
+		(TextLength >= 7 && str_startswith_nocase(pText, "!unmute") && (TextLength == 7 || pText[7] == ' ')))
 		return false;
 
 	CChat &Chat = GameClient()->m_Chat;

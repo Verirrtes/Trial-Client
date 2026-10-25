@@ -206,6 +206,29 @@ class CChat : public CComponent
 	int m_TranslateMessagePressedLine = -1;
 	// bestclient
 
+	// Trial: chat keyword search
+	CLineInputBuffered<MAX_CHAT_LENGTH> m_SearchInput;
+	bool m_SearchActive = false;
+	bool m_SearchButtonPressed = false;
+	bool m_SearchButtonRectValid = false;
+	int64_t m_SearchIgnoreTextUntil = 0;
+	CUIRect m_SearchButtonRect;
+	CUIRect m_SearchButtonUiRect;
+	CButtonContainer m_SearchButton;
+	// Trial
+
+	// Trial: timed chat mute
+	struct STimedMute
+	{
+		char m_aName[MAX_NAME_LENGTH];
+		int64_t m_Expires;
+	};
+	std::vector<STimedMute> m_vTimedMutes;
+	bool HandleTimedMuteCommand(const char *pLine);
+	int FindClientByNameNoCase(const char *pName) const;
+	void PruneTimedMutes();
+	// Trial
+
 	static void ConSay(IConsole::IResult *pResult, void *pUserData);
 	static void ConSayTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConChat(IConsole::IResult *pResult, void *pUserData);
@@ -221,6 +244,14 @@ class CChat : public CComponent
 
 	bool LineShouldHighlight(const char *pLine, const char *pName);
 	void StoreSave(const char *pText);
+	// Trial: chat keyword search
+	bool SearchFilterActive() const { return m_SearchActive && m_SearchInput.GetString()[0] != '\0'; }
+	bool LineMatchesSearch(const CLine &Line) const;
+	int CountSearchMatches() const;
+	void OpenSearch();
+	void CloseSearch();
+	void RenderSearchButton(const CUIRect &ButtonRect);
+	// Trial
 	// bestclient
 	vec2 ChatMousePos() const;
 	void OpenTranslateSettingsPopup();
@@ -245,6 +276,7 @@ public:
 	static constexpr float MESSAGE_TEE_PADDING_RIGHT = 0.5f;
 
 	bool IsActive() const { return m_Mode != MODE_NONE; }
+	bool IsTimedMuted(int ClientId) const;
 	void AddLine(int ClientId, int Team, const char *pLine);
 	void EnableMode(int Team);
 	void DisableMode();

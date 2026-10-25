@@ -4604,20 +4604,10 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	Ui()->DoLabel(&HeaderSubtitle, BcLocalize("Quality of life, particle trails and Discord presence."), 11.0f, TEXTALIGN_ML);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 
-	CUIRect VersionBadge;
-	VersionBadge.w = 104.0f;
-	VersionBadge.h = 20.0f;
-	VersionBadge.x = HeaderArea.x + HeaderArea.w - VersionBadge.w - 8.0f;
-	VersionBadge.y = HeaderArea.y + (HeaderArea.h - VersionBadge.h) * 0.5f;
-	Graphics()->DrawRect(VersionBadge.x, VersionBadge.y, VersionBadge.w, VersionBadge.h, ColorRGBA(0.35f, 0.8f, 1.0f, 0.14f), IGraphics::CORNER_ALL, 10.0f);
-	TextRender()->TextColor(ColorRGBA(0.6f, 0.88f, 1.0f, 0.95f));
-	Ui()->DoLabel(&VersionBadge, "v" TRIAL_CLIENT_VERSION, 10.0f, TEXTALIGN_MC);
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-
-	Content.HSplitTop(MarginBetweenViews, nullptr, &Content);
+	Content.HSplitTop(16.0f, nullptr, &Content);
 
 	// ---------------------------------------------------------------------
-	// Two columns: Trial features on the left, Discord/about on the right.
+	// Two columns: Trial features on the left, Discord on the right.
 	CUIRect LeftColumn, RightColumn;
 	Content.VSplitMid(&LeftColumn, &RightColumn, 22.0f);
 	LeftColumn.VSplitLeft(2.0f, nullptr, &LeftColumn);
@@ -4645,7 +4635,7 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 		Ui()->DoLabel(&Title, pText, HeadlineFontSize, TEXTALIGN_ML);
 	};
 
-	static CButtonContainer s_TrialQoLAuthor, s_TrialFpsSpooferAuthor, s_TrialParticleAuthor, s_TrialTrajectoryAuthor, s_TrialDiscordAuthor;
+	static CButtonContainer s_TrialQoLAuthor, s_TrialParticleAuthor, s_TrialTrajectoryAuthor, s_TrialDiscordAuthor;
 
 	// --- Trial QoL
 	const float QoLBlockHeight = LineSize + MarginSmall + 6.0f * LineSize + MarginSmall + 6.0f;
@@ -4677,64 +4667,6 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	DoLine_KeyReader(QoLBlock, s_TrialScreenshotReader, s_TrialScreenshotClear, BcLocalize("Screenshot key"), "screenshot");
 	static CButtonContainer s_TrialDemoReader, s_TrialDemoClear;
 	DoLine_KeyReader(QoLBlock, s_TrialDemoReader, s_TrialDemoClear, BcLocalize("Demo toggle key"), "tc_toggle_demo");
-
-	LeftColumn.HSplitTop(MarginBetweenViews, nullptr, &LeftColumn);
-
-	const bool FpsSpooferOn = g_Config.m_TcTrialFpsSpoofer != 0;
-	const float FpsSpooferBlockHeight = LineSize + MarginSmall + LineSize + (FpsSpooferOn ? MarginSmall + LineSize + 14.0f : 0.0f);
-	CUIRect FpsSpooferBlock;
-	LeftColumn.HSplitTop(FpsSpooferBlockHeight, &FpsSpooferBlock, &LeftColumn);
-	CUIRect FpsSpooferBg = FpsSpooferBlock;
-	FpsSpooferBg.w += BlockPadding;
-	FpsSpooferBg.h += BlockPadding;
-	FpsSpooferBg.x -= BlockPadding * 0.5f;
-	FpsSpooferBg.y -= BlockPadding * 0.5f;
-	BestClientUiTheme::DrawUiBlock(&FpsSpooferBg, IGraphics::CORNER_ALL, 10.0f);
-	BestClientSettingsSearch::DrawBlockHighlight(&g_Config.m_TcTrialFpsSpoofer, &FpsSpooferBg);
-	BestClientSettingsSearch::DrawBlockHighlight(&g_Config.m_TcTrialFpsSpooferMultiplier, &FpsSpooferBg);
-
-	CUIRect FpsSpooferTitle;
-	FpsSpooferBlock.HSplitTop(LineSize, &FpsSpooferTitle, &FpsSpooferBlock);
-	Graphics()->DrawRect(FpsSpooferTitle.x, FpsSpooferTitle.y + 5.0f, 3.0f, 10.0f, ColorRGBA(0.45f, 1.0f, 0.55f, 0.9f), IGraphics::CORNER_ALL, 1.5f);
-	FpsSpooferTitle.x += 9.0f;
-	FpsSpooferTitle.w -= 9.0f;
-	DrawTrialTitle(FpsSpooferTitle, BcLocalize("FPS Spoofer"), &s_TrialFpsSpooferAuthor, "запомни6");
-	FpsSpooferBlock.HSplitTop(MarginSmall, nullptr, &FpsSpooferBlock);
-
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTrialFpsSpoofer, BcLocalize("Enable FPS spoofer"), &g_Config.m_TcTrialFpsSpoofer, &FpsSpooferBlock, LineSize);
-
-	if(FpsSpooferOn)
-	{
-		constexpr int MinMultiplier = 20;
-		constexpr int MaxMultiplier = 100;
-		int &MultiplierValue = g_Config.m_TcTrialFpsSpooferMultiplier;
-
-		CUIRect FpsLine;
-		FpsSpooferBlock.HSplitTop(MarginSmall, nullptr, &FpsSpooferBlock);
-		FpsSpooferBlock.HSplitTop(LineSize, &FpsLine, &FpsSpooferBlock);
-
-		char aValueBuf[16];
-		str_format(aValueBuf, sizeof(aValueBuf), "%.1fx", MultiplierValue / 10.0f);
-		char aLabelBuf[64];
-		if(BestClientUiTheme::IsNewScrollbar())
-			str_copy(aLabelBuf, BcLocalize("Multiplier"));
-		else
-			str_format(aLabelBuf, sizeof(aLabelBuf), "%s: %s", BcLocalize("Multiplier"), aValueBuf);
-
-		CUIRect FpsLabel, FpsScrollBar;
-		FpsLine.VSplitMid(&FpsLabel, &FpsScrollBar, std::min(10.0f, FpsLine.w * 0.05f));
-		Ui()->DoLabel(&FpsLabel, aLabelBuf, FpsLabel.h * CUi::ms_FontmodHeight * 0.8f, TEXTALIGN_ML);
-		BestClientSettingsSearch::DrawItemHighlight(&g_Config.m_TcTrialFpsSpooferMultiplier, &FpsLine);
-		const float Rel = CUi::ms_LinearScrollbarScale.ToRelative(MultiplierValue, MinMultiplier, MaxMultiplier);
-		const float NewRel = Ui()->DoScrollbarH(&g_Config.m_TcTrialFpsSpooferMultiplier, &FpsScrollBar, Rel, nullptr, BestClientUiTheme::IsNewScrollbar() ? aValueBuf : nullptr);
-		MultiplierValue = std::clamp(CUi::ms_LinearScrollbarScale.ToAbsolute(NewRel, MinMultiplier, MaxMultiplier), MinMultiplier, MaxMultiplier);
-
-		CUIRect FpsSpooferHint;
-		FpsSpooferBlock.HSplitTop(14.0f, &FpsSpooferHint, &FpsSpooferBlock);
-		TextRender()->TextColor(ColorRGBA(0.6f, 0.7f, 0.82f, 0.9f));
-		Ui()->DoLabel(&FpsSpooferHint, BcLocalize("Visual only - the real frame rate is not changed."), 10.0f, TEXTALIGN_ML);
-		TextRender()->TextColor(TextRender()->DefaultTextColor());
-	}
 
 	LeftColumn.HSplitTop(MarginBetweenViews, nullptr, &LeftColumn);
 
@@ -4800,7 +4732,7 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	LeftColumn.HSplitTop(MarginBetweenViews, nullptr, &LeftColumn);
 
 	// --- Trajectory preview
-	const float TrajectoryBlockHeight = LineSize + MarginSmall + 3.0f * LineSize + 2.0f * (MarginSmall + LineSize) + 22.0f;
+	const float TrajectoryBlockHeight = LineSize + MarginSmall + 3.0f * LineSize + 3.0f * (MarginSmall + LineSize) + 2.0f * (MarginSmall + LineSize) + 22.0f;
 	CUIRect TrajectoryBlock;
 	LeftColumn.HSplitTop(TrajectoryBlockHeight, &TrajectoryBlock, &LeftColumn);
 	CUIRect TrajectoryBg = TrajectoryBlock;
@@ -4812,6 +4744,9 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	BestClientSettingsSearch::DrawBlockHighlight(&g_Config.m_TcTrialTrajectoryGrenade, &TrajectoryBg);
 	BestClientSettingsSearch::DrawBlockHighlight(&g_Config.m_TcTrialTrajectoryLaser, &TrajectoryBg);
 	BestClientSettingsSearch::DrawBlockHighlight(&g_Config.m_TcTrialTrajectoryShotgun, &TrajectoryBg);
+	BestClientSettingsSearch::DrawBlockHighlight(&g_Config.m_TcTrialTrajectoryGrenadeColor, &TrajectoryBg);
+	BestClientSettingsSearch::DrawBlockHighlight(&g_Config.m_TcTrialTrajectoryLaserColor, &TrajectoryBg);
+	BestClientSettingsSearch::DrawBlockHighlight(&g_Config.m_TcTrialTrajectoryShotgunColor, &TrajectoryBg);
 	BestClientSettingsSearch::DrawBlockHighlight(&g_Config.m_TcTrialTrajectoryAlpha, &TrajectoryBg);
 	BestClientSettingsSearch::DrawBlockHighlight(&g_Config.m_TcTrialTrajectoryWidth, &TrajectoryBg);
 
@@ -4826,6 +4761,12 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTrialTrajectoryGrenade, BcLocalize("Grenade"), &g_Config.m_TcTrialTrajectoryGrenade, &TrajectoryBlock, LineSize);
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTrialTrajectoryLaser, BcLocalize("Laser"), &g_Config.m_TcTrialTrajectoryLaser, &TrajectoryBlock, LineSize);
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTrialTrajectoryShotgun, BcLocalize("Shotgun"), &g_Config.m_TcTrialTrajectoryShotgun, &TrajectoryBlock, LineSize);
+
+	static CButtonContainer s_TrialTrajectoryGrenadeColorReset, s_TrialTrajectoryLaserColorReset, s_TrialTrajectoryShotgunColorReset;
+	DoLine_ColorPicker(&s_TrialTrajectoryGrenadeColorReset, LineSize, EditBoxFontSize, MarginSmall, &TrajectoryBlock, BcLocalize("Grenade color"), &g_Config.m_TcTrialTrajectoryGrenadeColor, color_cast<ColorRGBA>(ColorHSLA(0xFF14FF93U, true)), false);
+	DoLine_ColorPicker(&s_TrialTrajectoryLaserColorReset, LineSize, EditBoxFontSize, MarginSmall, &TrajectoryBlock, BcLocalize("Laser color"), &g_Config.m_TcTrialTrajectoryLaserColor, color_cast<ColorRGBA>(ColorHSLA(0xFF90FFACU, true)), false);
+	DoLine_ColorPicker(&s_TrialTrajectoryShotgunColorReset, LineSize, EditBoxFontSize, MarginSmall, &TrajectoryBlock, BcLocalize("Shotgun color"), &g_Config.m_TcTrialTrajectoryShotgunColor, color_cast<ColorRGBA>(ColorHSLA(0xFF51FFB9U, true)), false);
+
 	RowSlider(TrajectoryBlock, &g_Config.m_TcTrialTrajectoryAlpha, BcLocalize("Opacity"), 1, 100, "%");
 	RowSlider(TrajectoryBlock, &g_Config.m_TcTrialTrajectoryWidth, BcLocalize("Width"), 1, 10, "");
 
@@ -4892,15 +4833,88 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	Ui()->DoLabel(&DiscordNote, BcLocalize("Locked by Trial Client. Edit the config file to change it."), 11.0f, TEXTALIGN_ML);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 
-	RightColumn.HSplitTop(MarginBetweenViews, nullptr, &RightColumn);
+	const float ContentBottom = std::max(LeftColumn.y, RightColumn.y);
 
-	// --- Creator
+	CUIRect TrialScrollContentRect;
+	TrialScrollContentRect.x = Content.x;
+	TrialScrollContentRect.y = ContentBottom + MarginSmall * 2.0f;
+	TrialScrollContentRect.w = Content.w;
+	TrialScrollContentRect.h = 0.0f;
+	s_TrialScrollRegion.AddRect(TrialScrollContentRect);
+	s_TrialScrollRegion.End();
+}
+
+void CMenus::RenderSettingsTrialInfo(CUIRect MainView)
+{
+	const float LineSize = 20.0f;
+	const float MarginSmall = 5.0f;
+	const float HeadlineFontSize = 20.0f;
+	const float MarginBetweenViews = 30.0f;
+	const float BlockPadding = MarginBetweenViews * 0.6666f;
+
+	static CScrollRegion s_TrialInfoScrollRegion;
+	CScrollRegionParams ScrollParams;
+	ScrollParams.m_ScrollUnit = 60.0f;
+	ScrollParams.m_ScrollbarMargin = 5.0f;
+	s_TrialInfoScrollRegion.Begin(&MainView, &ScrollParams);
+	MainView.VSplitRight(5.0f, &MainView, nullptr);
+	MainView.VSplitLeft(5.0f, nullptr, &MainView);
+
+	CUIRect Content = MainView;
+	Content.HSplitTop(10.0f, nullptr, &Content);
+
+	// Trial header banner
+	const float HeaderHeight = 62.0f;
+	CUIRect Header, HeaderArea;
+	Content.HSplitTop(HeaderHeight, &Header, &Content);
+	HeaderArea = Header;
+	CUIRect HeaderBg = Header;
+	HeaderBg.w += BlockPadding;
+	HeaderBg.h += BlockPadding;
+	HeaderBg.x -= BlockPadding * 0.5f;
+	HeaderBg.y -= BlockPadding * 0.5f;
+	BestClientUiTheme::DrawUiBlock(&HeaderBg, IGraphics::CORNER_ALL, 10.0f);
+	Graphics()->DrawRect(HeaderBg.x, HeaderBg.y + 7.0f, 4.0f, HeaderBg.h - 14.0f, ColorRGBA(0.35f, 0.8f, 1.0f, 0.9f), IGraphics::CORNER_ALL, 2.0f);
+
+	CUIRect HeaderTitle, HeaderSubtitle;
+	Header.HSplitTop(24.0f, &HeaderTitle, &Header);
+	Header.HSplitTop(2.0f, nullptr, &Header);
+	Header.HSplitTop(14.0f, &HeaderSubtitle, &Header);
+	HeaderTitle.x += 12.0f;
+	HeaderTitle.w -= 12.0f;
+	HeaderSubtitle.x += 12.0f;
+	HeaderSubtitle.w -= 12.0f;
+
+	TextRender()->TextColor(ColorRGBA(0.95f, 0.98f, 1.0f, 1.0f));
+	Ui()->DoLabel(&HeaderTitle, "Trial Client", 22.0f, TEXTALIGN_ML);
+	TextRender()->TextColor(ColorRGBA(0.55f, 0.75f, 0.9f, 1.0f));
+	Ui()->DoLabel(&HeaderSubtitle, BcLocalize("Quality of life, particle trails and Discord presence."), 11.0f, TEXTALIGN_ML);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+
+	CUIRect VersionBadge;
+	VersionBadge.w = 104.0f;
+	VersionBadge.h = 20.0f;
+	VersionBadge.x = HeaderArea.x + HeaderArea.w - VersionBadge.w - 8.0f;
+	VersionBadge.y = HeaderArea.y + (HeaderArea.h - VersionBadge.h) * 0.5f;
+	Graphics()->DrawRect(VersionBadge.x, VersionBadge.y, VersionBadge.w, VersionBadge.h, ColorRGBA(0.35f, 0.8f, 1.0f, 0.14f), IGraphics::CORNER_ALL, 10.0f);
+	TextRender()->TextColor(ColorRGBA(0.6f, 0.88f, 1.0f, 0.95f));
+	Ui()->DoLabel(&VersionBadge, "v" TRIAL_CLIENT_VERSION, 10.0f, TEXTALIGN_MC);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+
+	Content.HSplitTop(16.0f, nullptr, &Content);
+
+	CUIRect InfoColumn = Content;
+	const float InfoWidth = std::min(Content.w, 560.0f);
+	InfoColumn.x += (InfoColumn.w - InfoWidth) * 0.5f;
+	InfoColumn.w = InfoWidth;
+
+	// --- Creators
 	const float CreatorTeeSize = 64.0f;
 	const float CreatorNameFontSize = 24.0f;
 	const float CreatorCardSize = CreatorTeeSize + MarginSmall * 2.0f;
 	const float CreatorBlockHeight = LineSize + MarginSmall + CreatorCardSize * 2.0f + MarginSmall * 2.0f;
 	CUIRect CreatorBlock;
-	RightColumn.HSplitTop(CreatorBlockHeight, &CreatorBlock, &RightColumn);
+	InfoColumn.HSplitTop(CreatorBlockHeight, &CreatorBlock, &InfoColumn);
 	CUIRect CreatorBg = CreatorBlock;
 	CreatorBg.w += BlockPadding;
 	CreatorBg.h += BlockPadding;
@@ -4913,7 +4927,7 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	Graphics()->DrawRect(CreatorTitle.x, CreatorTitle.y + 5.0f, 3.0f, 10.0f, ColorRGBA(0.75f, 0.55f, 1.0f, 0.9f), IGraphics::CORNER_ALL, 1.5f);
 	CreatorTitle.x += 9.0f;
 	CreatorTitle.w -= 9.0f;
-	Ui()->DoLabel(&CreatorTitle, BcLocalize("Creator"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&CreatorTitle, BcLocalize("Creators"), HeadlineFontSize, TEXTALIGN_ML);
 	CreatorBlock.HSplitTop(MarginSmall, nullptr, &CreatorBlock);
 
 	const auto RenderCreator = [&](const char *pName, const char *pSkinName, CButtonContainer *pButton) {
@@ -4937,12 +4951,12 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	CreatorBlock.HSplitTop(MarginSmall, nullptr, &CreatorBlock);
 	RenderCreator("запомни6", "zombie1", &s_TrialCreatorLinkSecond);
 
-	RightColumn.HSplitTop(MarginBetweenViews, nullptr, &RightColumn);
+	InfoColumn.HSplitTop(MarginBetweenViews, nullptr, &InfoColumn);
 
 	// --- About / Discord invite
 	const float AboutBlockHeight = 80.0f;
 	CUIRect AboutBlock;
-	RightColumn.HSplitTop(AboutBlockHeight, &AboutBlock, &RightColumn);
+	InfoColumn.HSplitTop(AboutBlockHeight, &AboutBlock, &InfoColumn);
 	CUIRect AboutBg = AboutBlock;
 	AboutBg.w += BlockPadding;
 	AboutBg.h += BlockPadding;
@@ -4971,13 +4985,13 @@ void CMenus::RenderSettingsTrial(CUIRect MainView)
 	if(DoButton_Menu(&s_TrialDiscordButton, BcLocalize("Join Discord"), 0, &DiscordButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 		Client()->ViewLink("https://discord.gg/cB9SmAeKv6");
 
-	CUIRect TrialScrollContentRect;
-	TrialScrollContentRect.x = Content.x;
-	TrialScrollContentRect.y = std::max(LeftColumn.y, RightColumn.y) + MarginSmall * 2.0f;
-	TrialScrollContentRect.w = Content.w;
-	TrialScrollContentRect.h = 0.0f;
-	s_TrialScrollRegion.AddRect(TrialScrollContentRect);
-	s_TrialScrollRegion.End();
+	CUIRect TrialInfoScrollContentRect;
+	TrialInfoScrollContentRect.x = Content.x;
+	TrialInfoScrollContentRect.y = InfoColumn.y + MarginSmall * 2.0f;
+	TrialInfoScrollContentRect.w = Content.w;
+	TrialInfoScrollContentRect.h = 0.0f;
+	s_TrialInfoScrollRegion.AddRect(TrialInfoScrollContentRect);
+	s_TrialInfoScrollRegion.End();
 }
 
 CUi::EPopupMenuFunctionResult CMenus::PopupVoiceModeration(void *pContext, CUIRect View, bool Active)

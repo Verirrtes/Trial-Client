@@ -43,6 +43,8 @@ float CChatScroll::MaxScrollOffset(const CChat &Chat, float Y, float HeightLimit
 			break;
 		if(Line.m_BcSavesChat && Line.m_aText[0] == '\0')
 			continue;
+		if(Chat.SearchFilterActive() && !Chat.LineMatchesSearch(Line))
+			continue;
 		TotalLines++;
 	}
 
@@ -54,6 +56,8 @@ float CChatScroll::MaxScrollOffset(const CChat &Chat, float Y, float HeightLimit
 		if(!Line.m_Initialized)
 			break;
 		if(Line.m_BcSavesChat && Line.m_aText[0] == '\0')
+			continue;
+		if(Chat.SearchFilterActive() && !Chat.LineMatchesSearch(Line))
 			continue;
 		const float LineH = LineHeight(Chat, i, OffsetType, FontSize, RealMsgPaddingY);
 		if(TempY - LineH < HeightLimit)
@@ -71,6 +75,8 @@ float CChatScroll::MaxScrollOffset(const CChat &Chat, float Y, float HeightLimit
 		if(!Line.m_Initialized)
 			break;
 		if(Line.m_BcSavesChat && Line.m_aText[0] == '\0')
+			continue;
+		if(Chat.SearchFilterActive() && !Chat.LineMatchesSearch(Line))
 			continue;
 		Offset += LineHeight(Chat, i, OffsetType, FontSize, RealMsgPaddingY);
 		Counted++;
@@ -100,6 +106,8 @@ void CChatScroll::OnDisableMode(CChat &Chat)
 void CChatScroll::OnLineAdded(CChat &Chat)
 {
 	if(Chat.m_BacklogScrollOffset <= 0.0f)
+		return;
+	if(Chat.SearchFilterActive() && !Chat.LineMatchesSearch(Chat.m_aLines[Chat.m_CurrentLine]))
 		return;
 
 	const float LineH = LineHeight(Chat, 0, 0, Chat.FontSize(), Chat.MessagePaddingY());
@@ -269,6 +277,8 @@ void CChatScroll::MeasureHeights(CChat &Chat, float TextBegin, float FontSize, f
 			Line.m_aYOffset[0] = -1.0f;
 			Line.m_aYOffset[1] = -1.0f;
 		}
+		if(Chat.SearchFilterActive() && !Chat.LineMatchesSearch(Line))
+			continue;
 
 		char aClientId[16] = "";
 		if(g_Config.m_ClShowIds && Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')

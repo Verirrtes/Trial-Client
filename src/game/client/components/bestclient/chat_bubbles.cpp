@@ -128,7 +128,7 @@ void CChatBubbles::AddBubble(int ClientId, int Team, const char *pText)
 		return;
 	if(GameClient()->m_aClients[ClientId].m_aName[0] == '\0')
 		return;
-	if(GameClient()->m_aClients[ClientId].m_ChatIgnore)
+	if(GameClient()->m_aClients[ClientId].m_ChatIgnore || GameClient()->m_Chat.IsTimedMuted(ClientId))
 		return;
 	if(GameClient()->m_Snap.m_LocalClientId != ClientId)
 	{

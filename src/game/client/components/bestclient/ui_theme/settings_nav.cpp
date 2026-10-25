@@ -65,6 +65,7 @@ static const int s_aEntityLeaves[] = {
 };
 static const int s_aTrialLeaves[] = {
 	SETTINGS_NAV_LEAF_TRIAL,
+	SETTINGS_NAV_LEAF_TRIAL_INFO,
 };
 
 static int LeafVisualRank(int Leaf)
@@ -182,6 +183,9 @@ SSettingsLeafTarget LeafTarget(int Leaf)
 	case SETTINGS_NAV_LEAF_TRIAL:
 		Target.m_SettingsPage = CMenus::SETTINGS_TRIAL;
 		break;
+	case SETTINGS_NAV_LEAF_TRIAL_INFO:
+		Target.m_SettingsPage = CMenus::SETTINGS_TRIAL_INFO;
+		break;
 	default:
 		Target.m_SettingsPage = CMenus::SETTINGS_GENERAL;
 		break;
@@ -193,7 +197,7 @@ int GroupForLeaf(int Leaf)
 {
 	if(Leaf == SETTINGS_NAV_LEAF_ENTITY)
 		return SETTINGS_NAV_GROUP_ENTITY;
-	if(Leaf == SETTINGS_NAV_LEAF_TRIAL)
+	if(Leaf == SETTINGS_NAV_LEAF_TRIAL || Leaf == SETTINGS_NAV_LEAF_TRIAL_INFO)
 		return SETTINGS_NAV_GROUP_TRIAL;
 	if(Leaf >= SETTINGS_NAV_LEAF_TC_SETTINGS && Leaf <= SETTINGS_NAV_LEAF_TC_CONFIGS)
 		return SETTINGS_NAV_GROUP_TCLIENT;
@@ -255,6 +259,7 @@ int LeafFromState(int SettingsPage, int TClientTab, int BestClientTab)
 		}
 	case CMenus::SETTINGS_ENTITY: return SETTINGS_NAV_LEAF_ENTITY;
 	case CMenus::SETTINGS_TRIAL: return SETTINGS_NAV_LEAF_TRIAL;
+	case CMenus::SETTINGS_TRIAL_INFO: return SETTINGS_NAV_LEAF_TRIAL_INFO;
 	default:
 		return SETTINGS_NAV_LEAF_GENERAL;
 	}
@@ -438,6 +443,7 @@ void CMenus::RenderSettingsNavNewStyle(CUIRect &TabBar)
 		case SETTINGS_NAV_LEAF_BC_INFO: return BcLocalize("Info");
 		case SETTINGS_NAV_LEAF_ENTITY: return Localize("Entity Settings");
 		case SETTINGS_NAV_LEAF_TRIAL: return Localize("Trial Settings");
+		case SETTINGS_NAV_LEAF_TRIAL_INFO: return "Info";
 		default: return "";
 		}
 	};
@@ -648,6 +654,11 @@ void CMenus::RenderSettingsPage(CUIRect MainView)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_LANGUAGE);
 		RenderSettingsTrial(MainView);
+	}
+	else if(g_Config.m_UiSettingsPage == SETTINGS_TRIAL_INFO)
+	{
+		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_LANGUAGE);
+		RenderSettingsTrialInfo(MainView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_PROFILES)
 	{

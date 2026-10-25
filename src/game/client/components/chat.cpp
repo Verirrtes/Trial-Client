@@ -35,6 +35,7 @@
 #include <game/localization.h>
 
 #include <algorithm> // bestclient
+#include <limits> // bestclient
 #include <string> // bestclient
 
 char CChat::ms_aDisplayText[MAX_CHAT_LENGTH] = "";
@@ -323,6 +324,7 @@ void CChat::OnConsoleInit()
 void CChat::OnInit()
 {
 	Reset();
+	m_SearchInput.SetEmptyText(Localize("Search chat..."));
 	Console()->Chain("cl_chat_old", ConchainChatOld, this);
 	Console()->Chain("cl_streamer_mode", ConchainStreamerMode, this); // Trial
 	Console()->Chain("tc_trial_chat_timestamps", ConchainTrialChatTimestamps, this); // Trial
@@ -339,6 +341,91 @@ vec2 CChat::ChatMousePos() const
 	const vec2 UiMousePos = Ui()->UpdatedMousePos() * vec2(Ui()->Screen()->w, Ui()->Screen()->h) / WindowSize;
 	return UiMousePos * vec2(Width / Ui()->Screen()->w, Height / Ui()->Screen()->h);
 }
+
+// Trial: chat keyword search
+bool CChat::LineMatchesSearch(const CLine &Line) const
+{
+	if(!SearchFilterActive())
+		return true;
+	const char *pQuery = m_SearchInput.GetString();
+	return str_utf8_find_nocase(Line.m_aName, pQuery) != nullptr ||
+	       str_utf8_find_nocase(Line.m_aText, pQuery) != nullptr;
+}
+
+int CChat::CountSearchMatches() const
+{
+	if(!SearchFilterActive())
+		return 0;
+
+	int Matches = 0;
+	for(const CLine &Line : m_aLines)
+	{
+		if(!Line.m_Initialized)
+			continue;
+		if(Line.m_BcSavesChat && Line.m_aText[0] == '\0')
+			continue;
+		if(LineMatchesSearch(Line))
+			Matches++;
+	}
+	return Matches;
+}
+
+void CChat::OpenSearch()
+{
+	if(m_Mode == MODE_NONE)
+		return;
+
+	m_SearchActive = true;
+	m_SearchButtonPressed = false;
+	m_SearchInput.Clear();
+	m_SearchInput.SetScrollOffset(0.0f);
+	m_SearchInput.SetScrollOffsetChange(0.0f);
+	m_Input.Deactivate();
+	m_SearchInput.Activate(EInputPriority::CHAT);
+	Ui()->ClosePopupMenu(&m_TranslateSettingsPopupId, true);
+	m_TranslateSettingsInputActive = false;
+	m_TranslateButtonRectValid = false;
+	m_BacklogScrollOffset = 0.0f;
+	m_BacklogScrollOffsetChange = 0.0f;
+	m_ActionLineIndex = -1;
+}
+
+void CChat::CloseSearch()
+{
+	if(!m_SearchActive)
+		return;
+
+	m_SearchActive = false;
+	m_SearchButtonPressed = false;
+	m_SearchInput.Clear();
+	m_SearchInput.SetScrollOffset(0.0f);
+	m_SearchInput.SetScrollOffsetChange(0.0f);
+	m_SearchInput.Deactivate();
+	if(m_Mode != MODE_NONE)
+		m_Input.Activate(EInputPriority::CHAT);
+}
+
+void CChat::RenderSearchButton(const CUIRect &ButtonRect)
+{
+	const bool Hovered = Ui()->MouseHovered(&ButtonRect);
+	const ColorRGBA IconColor = m_SearchActive ? ColorRGBA(0.55f, 0.8f, 1.0f, 1.0f) : ColorRGBA(1.0f, 1.0f, 1.0f, Hovered ? 1.0f : 0.8f);
+	const float IconSize = ButtonRect.h * 1.65f;
+	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH |
+		ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING |
+		ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING |
+		ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT |
+		ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+	TextRender()->TextColor(IconColor);
+	Ui()->DoLabel(&ButtonRect, FontIcon::MAGNIFYING_GLASS, IconSize, TEXTALIGN_MC);
+	TextRender()->SetRenderFlags(0);
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	if(Hovered)
+		Ui()->SetHotItem(&m_SearchButton);
+	GameClient()->m_Tooltips.DoToolTip(&m_SearchButton, &ButtonRect, Localize("Search chat"));
+}
+// Trial
 
 static bool TranslateBackendNeedsEndpoint(int BackendIndex)
 {
@@ -531,6 +618,14 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 	if(m_Mode == MODE_NONE)
 		return false;
 
+	// Trial: Ctrl+F opens chat search while the chat input is active
+	if(!m_SearchActive && (Event.m_Flags & IInput::FLAG_PRESS) && Event.m_Key == KEY_F && Input()->ModifierIsPressed())
+	{
+		m_SearchIgnoreTextUntil = time() + time_freq() / 10;
+		OpenSearch();
+		return true;
+	}
+
 	// bestclient
 	if((Event.m_Flags & IInput::FLAG_PRESS) && Event.m_Key == KEY_ESCAPE && Ui()->IsPopupOpen())
 	{
@@ -539,6 +634,57 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 	}
 	if(Ui()->IsPopupOpen(&m_TranslateSettingsPopupId) && Ui()->OnInput(Event))
 		return true;
+	// Trial: chat keyword search
+	if(Event.m_Key == KEY_MOUSE_1 && m_SearchButtonRectValid)
+	{
+		const vec2 MousePos = ChatMousePos();
+		const bool InsideButton = MousePos.x >= m_SearchButtonRect.x && MousePos.x <= m_SearchButtonRect.x + m_SearchButtonRect.w &&
+			MousePos.y >= m_SearchButtonRect.y && MousePos.y <= m_SearchButtonRect.y + m_SearchButtonRect.h;
+		if(Event.m_Flags & IInput::FLAG_PRESS)
+		{
+			m_SearchButtonPressed = InsideButton;
+			if(InsideButton)
+				return true;
+		}
+		else if(Event.m_Flags & IInput::FLAG_RELEASE)
+		{
+			const bool WasPressed = m_SearchButtonPressed;
+			const bool Activate = WasPressed && InsideButton;
+			m_SearchButtonPressed = false;
+			if(Activate)
+			{
+				if(m_SearchActive)
+					CloseSearch();
+				else
+					OpenSearch();
+				return true;
+			}
+			if(WasPressed)
+				return true;
+		}
+	}
+	if(m_SearchActive)
+	{
+		if((Event.m_Flags & IInput::FLAG_PRESS) && Event.m_Key == KEY_ESCAPE)
+		{
+			CloseSearch();
+			return true;
+		}
+		if((Event.m_Flags & IInput::FLAG_PRESS) && (Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER))
+		{
+			CloseSearch();
+			return true;
+		}
+		if((Event.m_Flags & IInput::FLAG_TEXT) && time() < m_SearchIgnoreTextUntil)
+		{
+			m_SearchIgnoreTextUntil = 0;
+			return true;
+		}
+		if(m_SearchInput.ProcessInput(Event))
+			return true;
+		return true;
+	}
+	// Trial
 	if(Event.m_Key == KEY_MOUSE_1 && m_TranslateMessageHoverLine >= 0)
 	{
 		if(Event.m_Flags & IInput::FLAG_PRESS)
@@ -919,6 +1065,9 @@ void CChat::DisableMode()
 		m_TranslateMessagePressedLine = -1;
 		// bestclient
 		m_Mode = MODE_NONE;
+		CloseSearch();
+		m_SearchButtonPressed = false;
+		m_SearchButtonRectValid = false;
 		// bestclient
 		GameClient()->m_BcUiAnimations.OnChatDisable();
 		CChatScroll::OnDisableMode(*this);
@@ -1060,12 +1209,198 @@ void CChat::StoreSave(const char *pText)
 	io_close(File);
 }
 
+// Trial: timed chat mute
+int CChat::FindClientByNameNoCase(const char *pName) const
+{
+	if(!pName || pName[0] == '\0')
+		return -1;
+
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
+	{
+		const auto &Client = GameClient()->m_aClients[ClientId];
+		if(!Client.m_Active || Client.m_aName[0] == '\0')
+			continue;
+		if(str_utf8_comp_nocase(Client.m_aName, pName) == 0)
+			return ClientId;
+	}
+
+	return -1;
+}
+
+void CChat::PruneTimedMutes()
+{
+	const int64_t Now = time();
+	m_vTimedMutes.erase(std::remove_if(m_vTimedMutes.begin(), m_vTimedMutes.end(), [Now](const STimedMute &Mute) {
+		return Mute.m_Expires <= Now;
+	}), m_vTimedMutes.end());
+}
+
+bool CChat::IsTimedMuted(int ClientId) const
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return false;
+
+	const char *pName = GameClient()->m_aClients[ClientId].m_aName;
+	if(pName[0] == '\0')
+		return false;
+
+	const int64_t Now = time();
+	for(const auto &Mute : m_vTimedMutes)
+	{
+		if(Mute.m_Expires > Now && str_utf8_comp_nocase(Mute.m_aName, pName) == 0)
+			return true;
+	}
+	return false;
+}
+
+bool CChat::HandleTimedMuteCommand(const char *pLine)
+{
+	if(!pLine)
+		return false;
+
+	bool IsUnmute = false;
+	const char *pArguments = nullptr;
+	if(str_startswith_nocase(pLine, "!mute") && (pLine[5] == '\0' || pLine[5] == ' '))
+	{
+		pArguments = pLine + 5;
+	}
+	else if(str_startswith_nocase(pLine, "!unmute") && (pLine[7] == '\0' || pLine[7] == ' '))
+	{
+		IsUnmute = true;
+		pArguments = pLine + 7;
+	}
+	else
+	{
+		return false;
+	}
+
+	pArguments = str_utf8_skip_whitespaces(pArguments);
+	char aArguments[MAX_CHAT_LENGTH];
+	str_copy(aArguments, pArguments, sizeof(aArguments));
+	int ArgumentsLength = str_length(aArguments);
+	while(ArgumentsLength > 0 && (aArguments[ArgumentsLength - 1] == ' ' || aArguments[ArgumentsLength - 1] == '\t'))
+		aArguments[--ArgumentsLength] = '\0';
+	pArguments = aArguments;
+
+	const char *pUsage = "Usage: !mute <player> <minutes> or !unmute <player|all>";
+	if(*pArguments == '\0')
+	{
+		AddLine(SERVER_MSG, 0, pUsage);
+		return true;
+	}
+
+	if(IsUnmute)
+	{
+		char aName[MAX_NAME_LENGTH];
+		str_copy(aName, pArguments, sizeof(aName));
+
+		size_t Removed = 0;
+		if(str_comp_nocase(aName, "all") == 0)
+		{
+			Removed = m_vTimedMutes.size();
+			m_vTimedMutes.clear();
+		}
+		else
+		{
+			const size_t OldSize = m_vTimedMutes.size();
+			m_vTimedMutes.erase(std::remove_if(m_vTimedMutes.begin(), m_vTimedMutes.end(), [&aName](const STimedMute &Mute) {
+				return str_utf8_comp_nocase(Mute.m_aName, aName) == 0;
+			}), m_vTimedMutes.end());
+			Removed = OldSize - m_vTimedMutes.size();
+		}
+
+		char aBuf[128];
+		if(Removed > 0)
+			str_format(aBuf, sizeof(aBuf), "Chat mute removed for %s.", str_comp_nocase(aName, "all") == 0 ? "all players" : aName);
+		else
+			str_format(aBuf, sizeof(aBuf), "No active chat mute found for %s.", aName);
+		AddLine(SERVER_MSG, 0, aBuf);
+		return true;
+	}
+
+	const char *pLastSpace = str_rchr(pArguments, ' ');
+	if(!pLastSpace)
+	{
+		AddLine(SERVER_MSG, 0, pUsage);
+		return true;
+	}
+
+	const char *pMinutes = pLastSpace + 1;
+	bool ValidMinutes = *pMinutes != '\0';
+	for(const char *p = pMinutes; ValidMinutes && *p != '\0'; ++p)
+		ValidMinutes = *p >= '0' && *p <= '9';
+	int64_t Minutes = ValidMinutes ? str_toint64_base(pMinutes) : 0;
+	if(!ValidMinutes || Minutes <= 0)
+	{
+		AddLine(SERVER_MSG, 0, pUsage);
+		return true;
+	}
+
+	const int NameLength = (int)(pLastSpace - pArguments);
+	if(NameLength <= 0 || NameLength >= MAX_NAME_LENGTH)
+	{
+		AddLine(SERVER_MSG, 0, pUsage);
+		return true;
+	}
+
+	char aName[MAX_NAME_LENGTH];
+	str_copy(aName, pArguments, NameLength + 1);
+	int TrimmedLength = NameLength;
+	while(TrimmedLength > 0 && (aName[TrimmedLength - 1] == ' ' || aName[TrimmedLength - 1] == '\t'))
+		aName[--TrimmedLength] = '\0';
+	if(aName[0] == '\0')
+	{
+		AddLine(SERVER_MSG, 0, pUsage);
+		return true;
+	}
+
+	const int ClientId = FindClientByNameNoCase(aName);
+	if(ClientId < 0)
+	{
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "Player \"%s\" is not online.", aName);
+		AddLine(SERVER_MSG, 0, aBuf);
+		return true;
+	}
+
+	const char *pTargetName = GameClient()->m_aClients[ClientId].m_aName;
+	const int64_t Now = time();
+	const int64_t MinuteTicks = 60 * time_freq();
+	const int64_t MaxMinutes = (std::numeric_limits<int64_t>::max() - Now) / MinuteTicks;
+	const int64_t EffectiveMinutes = std::min(Minutes, MaxMinutes);
+	const int64_t Expires = Now + EffectiveMinutes * MinuteTicks;
+	bool Updated = false;
+	for(auto &Mute : m_vTimedMutes)
+	{
+		if(str_utf8_comp_nocase(Mute.m_aName, pTargetName) == 0)
+		{
+			Mute.m_Expires = Expires;
+			Updated = true;
+			break;
+		}
+	}
+	if(!Updated)
+	{
+		STimedMute Mute;
+		str_copy(Mute.m_aName, pTargetName, sizeof(Mute.m_aName));
+		Mute.m_Expires = Expires;
+		m_vTimedMutes.push_back(Mute);
+	}
+
+	char aBuf[128];
+	str_format(aBuf, sizeof(aBuf), "Muted %s for %" PRId64 " minute%s.", g_Config.m_ClStreamerMode ? "***" : pTargetName, EffectiveMinutes, EffectiveMinutes == 1 ? "" : "s");
+	AddLine(SERVER_MSG, 0, aBuf);
+	return true;
+}
+// Trial
+
 void CChat::AddLine(int ClientId, int Team, const char *pLine)
 {
 	if(*pLine == 0 ||
 		(ClientId == SERVER_MSG && !g_Config.m_ClShowChatSystem) ||
 		(ClientId >= 0 && (GameClient()->m_aClients[ClientId].m_aName[0] == '\0' || // unknown client
 					  GameClient()->m_aClients[ClientId].m_ChatIgnore ||
+					  IsTimedMuted(ClientId) ||
 					  (GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_ClShowChatFriends && !GameClient()->m_aClients[ClientId].m_Friend) ||
 					  (GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_ClShowChatTeamMembersOnly && GameClient()->IsOtherTeam(ClientId) && GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId) != TEAM_FLOCK) ||
 					  (GameClient()->m_Snap.m_LocalClientId != ClientId && GameClient()->m_aClients[ClientId].m_Foe))))
@@ -1403,7 +1738,7 @@ void CChat::OnPrepareLines(float y)
 	float FontSize = this->FontSize();
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsShown() && (Graphics()->ScreenAspect() > 1.7f); // only assume scoreboard when screen ratio is widescreen(something around 16:9)
 	const bool EditorPreview = GameClient()->m_HudEditor.IsActive();
-	const bool ShowLargeArea = EditorPreview || m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
+	const bool ShowLargeArea = EditorPreview || m_Show || m_SearchActive || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
 	const bool LayoutChanged = Layout.m_X != m_PrevHudLayoutX || Layout.m_Y != m_PrevHudLayoutY || Layout.m_Scale != m_PrevHudLayoutScale || LayoutEnabled != m_PrevHudLayoutEnabled;
 	const bool ModeActive = m_Mode != MODE_NONE;
 	const bool ForceRecreate = IsScoreBoardOpen != m_PrevScoreBoardShowed || ShowLargeArea != m_PrevShowChat || ModeActive != m_PrevModeActive || LayoutChanged;
@@ -1464,6 +1799,8 @@ void CChat::OnPrepareLines(float y)
 			Line.m_aYOffset[1] = 0.0f;
 			continue;
 		}
+		if(SearchFilterActive() && !LineMatchesSearch(Line))
+			continue;
 		// bestclient
 
 		const float LineH = Line.m_aYOffset[OffsetType] >= 0.0f ? Line.m_aYOffset[OffsetType] : FontSize + RealMsgPaddingY;
@@ -1690,6 +2027,8 @@ void CChat::OnPrepareLines(float y)
 
 void CChat::OnRender()
 {
+	PruneTimedMutes();
+
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
@@ -1716,6 +2055,7 @@ void CChat::OnRender()
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreenToSize(Width, Height);
 	m_TranslateButtonRectValid = false; // bestclient
+	m_SearchButtonRectValid = false; // Trial
 
 	// bestclient
 	if(!HudLayout::IsEnabled(HudLayout::MODULE_CHAT) && m_Mode == MODE_NONE)
@@ -1734,6 +2074,56 @@ void CChat::OnRender()
 	// bestclient
 	if(m_Mode != MODE_NONE)
 	{
+		// Trial: chat keyword search
+		const float UiScale = Ui()->Screen()->h / Height;
+		const float ButtonSize = std::max(24.0f, ScaledFontSize * 1.75f);
+		const float ButtonGap = 4.0f;
+		if(m_SearchActive)
+		{
+			const float SearchBarHeight = std::max(ScaledFontSize * 1.5f, 16.0f);
+			const CUIRect SearchBar = {x, y + ChatOpenOffsetY, ChatWidth(), SearchBarHeight};
+			Graphics()->TextureClear();
+			Graphics()->DrawRect(SearchBar.x - 1.0f, SearchBar.y - 1.0f, SearchBar.w + 2.0f, SearchBar.h + 2.0f,
+				ColorRGBA(1.0f, 1.0f, 1.0f, 0.2f), IGraphics::CORNER_ALL, 4.5f);
+			Graphics()->DrawRect(SearchBar.x, SearchBar.y, SearchBar.w, SearchBar.h,
+				ColorRGBA(0.06f, 0.06f, 0.06f, 0.92f), IGraphics::CORNER_ALL, 4.0f);
+
+			const float Padding = std::max(5.0f, ScaledFontSize * 0.4f);
+			const float CountWidth = SearchFilterActive() ? std::min(SearchBar.w * 0.42f, 84.0f) : 0.0f;
+			const CUIRect TextRect = {SearchBar.x + Padding, SearchBar.y,
+				std::max(20.0f, SearchBar.w - Padding * 2.0f - CountWidth), SearchBar.h};
+
+			if(SearchFilterActive())
+			{
+				char aCount[64];
+				const int Matches = CountSearchMatches();
+				if(Matches == 1)
+					str_format(aCount, sizeof(aCount), Localize("%d match"), Matches);
+				else
+					str_format(aCount, sizeof(aCount), Localize("%d matches"), Matches);
+				const CUIRect CountRect = {SearchBar.x + SearchBar.w - CountWidth - Padding, SearchBar.y, CountWidth, SearchBar.h};
+				const CUIRect CountUiRect = {CountRect.x * UiScale, CountRect.y * UiScale, CountRect.w * UiScale, CountRect.h * UiScale};
+				Ui()->MapScreen();
+				TextRender()->TextColor(Matches == 0 ? ColorRGBA(1.0f, 0.55f, 0.55f, 1.0f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.65f));
+				Ui()->DoLabel(&CountUiRect, aCount, ScaledFontSize * UiScale * 0.8f, TEXTALIGN_MR);
+				TextRender()->TextColor(TextRender()->DefaultTextColor());
+				Graphics()->MapScreenToSize(Width, Height);
+			}
+
+			m_SearchInput.Activate(EInputPriority::CHAT);
+			const float XScale = Graphics()->ScreenWidth() / Width;
+			const float YScale = Graphics()->ScreenHeight() / Height;
+			Graphics()->ClipEnable((int)(TextRect.x * XScale), (int)(TextRect.y * YScale), (int)(TextRect.w * XScale), (int)(TextRect.h * YScale));
+			const bool WasChanged = m_SearchInput.WasChanged();
+			const bool WasCursorChanged = m_SearchInput.WasCursorChanged();
+			const bool Changed = WasChanged || WasCursorChanged;
+			m_SearchInput.Render(&TextRect, ScaledFontSize, TEXTALIGN_ML, Changed, TextRect.w, 0.0f);
+			Graphics()->ClipDisable();
+
+			m_SearchButtonRect = {SearchBar.x + SearchBar.w + ButtonGap, SearchBar.y, ButtonSize, SearchBarHeight};
+		}
+		else
+		{
 		// render chat input
 		CTextCursor InputCursor;
 		// bestclient
@@ -1823,11 +2213,12 @@ void CChat::OnRender()
 		// bestclient
 
 		// bestclient
-		const float TranslateButtonSize = std::max(24.0f, InputCursor.m_FontSize * 1.75f);
-		const float TranslateButtonGap = 4.0f;
-		const float UiScale = Ui()->Screen()->h / Height;
+		const float TranslateButtonSize = ButtonSize;
+		const float TranslateButtonGap = ButtonGap;
+		const float RightEdge = ClippingRect.x + ClippingRect.w;
+		m_SearchButtonRect = {RightEdge + TranslateButtonGap, y, ButtonSize, InputCursor.m_FontSize};
 		m_TranslateButtonRect = {
-			ClippingRect.x + ClippingRect.w + TranslateButtonGap,
+			m_SearchButtonRect.x + ButtonSize + TranslateButtonGap,
 			y,
 			TranslateButtonSize,
 			InputCursor.m_FontSize};
@@ -1841,6 +2232,18 @@ void CChat::OnRender()
 		RenderTranslateSettingsButton(m_TranslateButtonUiRect);
 		Graphics()->MapScreenToSize(Width, Height);
 		// bestclient
+		}
+
+		m_SearchButtonUiRect = {
+			m_SearchButtonRect.x * UiScale,
+			m_SearchButtonRect.y * UiScale,
+			m_SearchButtonRect.w * UiScale,
+			m_SearchButtonRect.h * UiScale};
+		m_SearchButtonRectValid = true;
+		Ui()->MapScreen();
+		RenderSearchButton(m_SearchButtonUiRect);
+		Graphics()->MapScreenToSize(Width, Height);
+		// Trial
 	}
 
 	// bestclient
@@ -1861,7 +2264,7 @@ void CChat::OnRender()
 
 	// bestclient
 	bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsShown() && (Graphics()->ScreenAspect() > 1.7f);
-	const bool ShowLargeArea = EditorPreview || m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
+	const bool ShowLargeArea = EditorPreview || m_Show || m_SearchActive || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
 	int64_t Now = time();
 	float HeightLimit;
 	if(IsScoreBoardOpen)
@@ -1915,6 +2318,8 @@ void CChat::OnRender()
 
 		// bestclient
 		if(Line.m_BcSavesChat && Line.m_aText[0] == '\0')
+			continue;
+		if(SearchFilterActive() && !LineMatchesSearch(Line))
 			continue;
 		const float LineH = Line.m_aYOffset[OffsetType] >= 0.0f ? Line.m_aYOffset[OffsetType] : MeasureFontSize + RealMsgPaddingY;
 		RenderY -= LineH;
@@ -2047,7 +2452,7 @@ CUIRect CChat::GetHudRect(float HudWidth, float HudHeight, bool ForcePreview) co
 	const auto Layout = HudLayout::Get(HudLayout::MODULE_CHAT, HudWidth, HudHeight);
 	const float Scale = std::clamp(Layout.m_Scale / 100.0f, 0.25f, 3.0f);
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsShown() && (Graphics()->ScreenAspect() > 1.7f);
-	const bool ShowLargeArea = ForcePreview || m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
+	const bool ShowLargeArea = ForcePreview || m_Show || m_SearchActive || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
 	const float VisibleHeight = IsScoreBoardOpen ? 93.0f * Scale : (ShowLargeArea ? 223.0f * Scale : 73.0f * Scale);
 	float ExtraTop = 0.0f;
 	float ExtraBottom = 0.0f;
@@ -2057,8 +2462,10 @@ CUIRect CChat::GetHudRect(float HudWidth, float HudHeight, bool ForcePreview) co
 	{
 		const float ScaledFontSize = FontSize() * (8.0f / 6.0f);
 		// bestclient
-		const float TranslateButtonWidth = std::max(24.0f, ScaledFontSize * 1.75f) + 4.0f;
-		VisibleWidth = std::max(VisibleWidth, std::max(ChatWidth() - 190.0f * Scale, 190.0f * Scale) + TranslateButtonWidth);
+		const float ChatButtonSize = std::max(24.0f, ScaledFontSize * 1.75f);
+		const float ChatButtonGap = 4.0f;
+		const float ChatButtonsWidth = (ChatButtonSize + ChatButtonGap) * 2.0f;
+		VisibleWidth = std::max(VisibleWidth, std::max(ChatWidth() - 190.0f * Scale, 190.0f * Scale) + ChatButtonsWidth);
 		ExtraTop = ScaledFontSize;
 		ExtraBottom = std::max(2.25f * ScaledFontSize, std::max(ScaledFontSize + 4.0f, 16.0f));
 		// bestclient
@@ -2100,6 +2507,8 @@ void CChat::SendChat(int Team, const char *pLine)
 		return;
 
 	// bestclient
+	if(HandleTimedMuteCommand(pLine))
+		return;
 	if(GameClient()->m_FastPractice.ConsumePracticeChatCommand(Team, pLine))
 		return;
 	if(GameClient()->m_VoiceChat.TryHandleChatCommand(pLine))
